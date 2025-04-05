@@ -1,0 +1,27 @@
+
+UNDEFINED = 0
+LORA_433 = 1
+LORA_868 = 2
+RFM_433  = 3
+my_radio = UNDEFINED
+my_node =  UNDEFINED
+
+NODE_BASE       = 1
+NODE_REMOTE     = 2
+
+
+LABEL_UNDEFINED = "????"
+LABEL_LORA_433 = "L433"
+LABEL_LORA_868 = "L868"  
+LABEL_RFM_433 = "R433"
+MSG_START                   = '<'
+MSG_END                     = '>'
+MSG_UNDEFINED               = '-'
+MSG_SET_BASE_NODE           = 'X' 
+MSG_ACK_BASE_TO_REMOTE      = 'Y'
+MSG_SEND_BASE_TO_LOGGER     = 'Z'
+MSG_SET_REMOTE_NODE         = 'A'
+MSG_SEND_REMOTE_TO_BASE     = 'B'
+MSG_ = ''
+
+radio_labels = [LABEL_UNDEFINED, LABEL_LORA_433, LABEL_LORA_868, LABEL_RFM_433]
