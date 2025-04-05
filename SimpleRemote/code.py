@@ -21,6 +21,12 @@ import data
 TX0_PIN      = board.GP0
 RX0_PIN      = board.GP1
 
+led = digitalio.DigitalInOut(board.LED)
+led.direction = digitalio.Direction.OUTPUT
+
+
+
+
 data.my_radio = data.LORA_868
 data.my_node = data.NODE_REMOTE
 
@@ -64,13 +70,28 @@ rfm9x.send(
 )
 
 test_messages = ["<,A,R,2,P,10,N,0,S,0,T,0,>",
-                 "<,B,R,2,P,10,N,0,S,0,T,0,>",
-                 "<,B,R,1,P,10,N,0,S,0,T,0,>",
-                 "<,Y,R,2,P,10,N,0,S,0,T,0,>",
+                 "<,B,R,1,P,20,N,0,S,0,T,0,>",
+                 "<,B,R,2,P,20,N,0,S,0,T,0,>",
+                 "<,B,R,3,P,30,N,0,S,0,T,0,>",
                  "<,A,R,2,P,10,N,0,S,0,T,0,>",
                  "<,Y,R,2,P,10,N,0,S,0,T,0,>",
                  "<,Z,R,2,P,10,N,0,S,0,T,0,>",
                  "<,B,R,2,P,10,N,0,S,0,T,0,>"]
+
+def led_blink(n,on,off):
+    for n in range(n):
+        led.value = True
+        time.sleep(on)
+        led.value = False
+        time.sleep(off)
+        
+def led_on():
+    led.value = True
+    
+def led_off():
+    led.value = False
+    
+
 
 def parse_radio_msg(line):
     try:
@@ -170,8 +191,78 @@ cmd = ""
 new_state = 0
 state = new_state
     
+led_blink(20,0.2,0.4)
 
 timeout = time.monotonic() + 4.0
+
+
+while True:
+    if new_state != state:
+        print(state,'->',new_state)
+        state = new_state
+    if state == 0:
+        timeout = time.monotonic() + 2 * (data.my_radio -1)
+        led_off()
+        new_state = 10
+        
+    if state == 10:
+        if time.monotonic() > timeout:
+            new_state = 20
+            led_blink(5,0.2,0.2)
+    
+    if state == 20:
+        led_blink(2,0.5,0.5)
+        cmd = test_messages[data.my_radio]
+        print("Send test: ",cmd)
+        exec_uart_cmd(cmd)
+        new_state = 25
+        timeout = time.monotonic() + 4
+ 
+    if state == 25:
+        new_state = 30
+        print("receiving")
+        
+    if state == 30:
+        packet = rfm9x.receive(with_header=True)
+        # If no packet was received during the timeout then None is returned.
+        if packet is not None:
+            new_state = 40
+        elif time.monotonic() > timeout:
+            new_state = 100
+            
+    elif state == 40:
+        led_on()
+        time.sleep(5.0)
+        led_off()
+        new_state = 0
+        
+        '''
+        parse_radio_msg(packet)
+        parsed_received = parse_radio_msg(packet[4:].decode('utf-8'))
+        #radio_reply = parse_radio_reply(packet[4:].decode('utf-8'), rfm9x.last_rssi)
+        if parsed_received is not None:
+            print(parsed_received)
+            if data.my_node == data.NODE_BASE:
+                if parsed_received['msg_type'] == data.MSG_SEND_REMOTE_TO_BASE:
+                    write_msg_to_uart(parsed_received)
+                    
+                    
+            if data.my_node == data.NODE_REMOTE :
+                 if parsed_received['msg_type'] == data.MSG_ACK_BASE_TO_REMOTE:
+                     write_msg_to_uart(parsed_received)
+
+        
+        if time.monotonic() > timeout:
+            new_state = 100
+        '''
+    
+    if state ==100:
+        print("timeout")
+        led_blink(100,0.05,0.05)
+        led_off
+        new_state = 0
+    
+
 
 while True:
     if new_state != state:
@@ -201,10 +292,13 @@ while True:
     elif state == 6:
         d = uart.read(1)
         if d is not None:
-            c = d.decode()
-            if c == '>':
-               new_state = 10
-            cmd = cmd + c
+            try:
+                c = d.decode()
+                if c == '>':
+                   new_state = 10
+                cmd = cmd + c
+            except:
+                pass
 
     elif state == 10:  # parse uart command and send via radio
         exec_uart_cmd(cmd)
